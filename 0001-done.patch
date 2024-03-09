@@ -1,0 +1,271 @@
+From 789f1b8d82f61101d9db7b3039d6d835ab8d568c Mon Sep 17 00:00:00 2001
+From: Justin <jduviv1@wgu.edu>
+Date: Sat, 9 Mar 2024 16:24:07 -0500
+Subject: [PATCH] done
+
+---
+ .idea/.gitignore                              |  8 +++
+ .idea/forage-jpmc-swe-task-3.iml              | 14 +++++
+ .../inspectionProfiles/profiles_settings.xml  |  6 ++
+ .idea/misc.xml                                |  7 +++
+ .idea/modules.xml                             |  8 +++
+ .idea/vcs.xml                                 |  6 ++
+ src/DataManipulator.ts                        | 44 ++++++++-----
+ src/Graph.tsx                                 | 63 +++++++++++--------
+ 8 files changed, 117 insertions(+), 39 deletions(-)
+ create mode 100644 .idea/.gitignore
+ create mode 100644 .idea/forage-jpmc-swe-task-3.iml
+ create mode 100644 .idea/inspectionProfiles/profiles_settings.xml
+ create mode 100644 .idea/misc.xml
+ create mode 100644 .idea/modules.xml
+ create mode 100644 .idea/vcs.xml
+
+diff --git a/.idea/.gitignore b/.idea/.gitignore
+new file mode 100644
+index 0000000..13566b8
+--- /dev/null
++++ b/.idea/.gitignore
+@@ -0,0 +1,8 @@
++# Default ignored files
++/shelf/
++/workspace.xml
++# Editor-based HTTP Client requests
++/httpRequests/
++# Datasource local storage ignored files
++/dataSources/
++/dataSources.local.xml
+diff --git a/.idea/forage-jpmc-swe-task-3.iml b/.idea/forage-jpmc-swe-task-3.iml
+new file mode 100644
+index 0000000..fcf442d
+--- /dev/null
++++ b/.idea/forage-jpmc-swe-task-3.iml
+@@ -0,0 +1,14 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<module type="PYTHON_MODULE" version="4">
++  <component name="NewModuleRootManager">
++    <content url="file://$MODULE_DIR$">
++      <excludeFolder url="file://$MODULE_DIR$/.venv" />
++    </content>
++    <orderEntry type="jdk" jdkName="Python 3.12 (forage-jpmc-swe-task-3)" jdkType="Python SDK" />
++    <orderEntry type="sourceFolder" forTests="false" />
++  </component>
++  <component name="PyDocumentationSettings">
++    <option name="format" value="PLAIN" />
++    <option name="myDocStringFormat" value="Plain" />
++  </component>
++</module>
+\ No newline at end of file
+diff --git a/.idea/inspectionProfiles/profiles_settings.xml b/.idea/inspectionProfiles/profiles_settings.xml
+new file mode 100644
+index 0000000..105ce2d
+--- /dev/null
++++ b/.idea/inspectionProfiles/profiles_settings.xml
+@@ -0,0 +1,6 @@
++<component name="InspectionProjectProfileManager">
++  <settings>
++    <option name="USE_PROJECT_PROFILE" value="false" />
++    <version value="1.0" />
++  </settings>
++</component>
+\ No newline at end of file
+diff --git a/.idea/misc.xml b/.idea/misc.xml
+new file mode 100644
+index 0000000..51bc26f
+--- /dev/null
++++ b/.idea/misc.xml
+@@ -0,0 +1,7 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="Black">
++    <option name="sdkName" value="Python 3.12 (forage-jpmc-swe-task-3)" />
++  </component>
++  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.12 (forage-jpmc-swe-task-3)" project-jdk-type="Python SDK" />
++</project>
+\ No newline at end of file
+diff --git a/.idea/modules.xml b/.idea/modules.xml
+new file mode 100644
+index 0000000..ade28e9
+--- /dev/null
++++ b/.idea/modules.xml
+@@ -0,0 +1,8 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="ProjectModuleManager">
++    <modules>
++      <module fileurl="file://$PROJECT_DIR$/.idea/forage-jpmc-swe-task-3.iml" filepath="$PROJECT_DIR$/.idea/forage-jpmc-swe-task-3.iml" />
++    </modules>
++  </component>
++</project>
+\ No newline at end of file
+diff --git a/.idea/vcs.xml b/.idea/vcs.xml
+new file mode 100644
+index 0000000..35eb1dd
+--- /dev/null
++++ b/.idea/vcs.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="VcsDirectoryMappings">
++    <mapping directory="" vcs="Git" />
++  </component>
++</project>
+\ No newline at end of file
+diff --git a/src/DataManipulator.ts b/src/DataManipulator.ts
+index 7f62295..9d9364e 100644
+--- a/src/DataManipulator.ts
++++ b/src/DataManipulator.ts
+@@ -1,20 +1,36 @@
+-import { ServerRespond } from './DataStreamer';
++import { ServerRespond } from "./DataStreamer";
+ 
+ export interface Row {
+-  stock: string,
+-  top_ask_price: number,
+-  timestamp: Date,
++  price_abc: number;
++  price_def: number;
++  ratio: number;
++  upper_bound: number;
++  lower_bound: number;
++  trigger_alert: number | undefined;
++  timestamp: Date;
+ }
+ 
+-
+ export class DataManipulator {
+-  static generateRow(serverResponds: ServerRespond[]) {
+-    return serverResponds.map((el: any) => {
+-      return {
+-        stock: el.stock,
+-        top_ask_price: el.top_ask && el.top_ask.price || 0,
+-        timestamp: el.timestamp,
+-      };
+-    })
++  static generateRow(serverResponds: ServerRespond[]): Row {
++    const priceABC =
++      (serverResponds[0].top_ask.price + serverResponds[0].top_bid.price) / 2;
++    const priceDEF =
++      (serverResponds[1].top_ask.price + serverResponds[1].top_bid.price) / 2;
++    const ratio = priceABC / priceDEF;
++    const upperBound = 1 + 0.05;
++    const lowerBound = 1 - 0.05;
++    return {
++      price_abc: priceABC,
++      price_def: priceDEF,
++      ratio,
++        serverResponds[0].timestamp > serv
++      timestamp:erResponds[1].timestamp
++          ? serverResponds[0].timestamp
++          : serverResponds[1].timestamp,
++      upper_bound: upperBound,
++      lower_bound: lowerBound,
++      trigger_alert:
++        ratio > upperBound || ratio < lowerBound ? ratio : undefined,
++    };
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/src/Graph.tsx b/src/Graph.tsx
+index 277797d..1298be9 100644
+--- a/src/Graph.tsx
++++ b/src/Graph.tsx
+@@ -1,32 +1,37 @@
+-import React, { Component } from 'react';
+-import { Table } from '@finos/perspective';
+-import { ServerRespond } from './DataStreamer';
+-import { DataManipulator } from './DataManipulator';
+-import './Graph.css';
++import React, { Component } from "react";
++import { Table, TableData } from "@finos/perspective";
++import { ServerRespond } from "./DataStreamer";
++import { DataManipulator } from "./DataManipulator";
++import "./Graph.css";
+ 
+ interface IProps {
+-  data: ServerRespond[],
++  data: ServerRespond[];
+ }
+ 
+ interface PerspectiveViewerElement extends HTMLElement {
+-  load: (table: Table) => void,
++  load: (table: Table) => void;
+ }
+ class Graph extends Component<IProps, {}> {
+   table: Table | undefined;
+ 
+   render() {
+-    return React.createElement('perspective-viewer');
++    return React.createElement("perspective-viewer");
+   }
+ 
+   componentDidMount() {
+     // Get element from the DOM.
+-    const elem = document.getElementsByTagName('perspective-viewer')[0] as unknown as PerspectiveViewerElement;
++    const elem = (document.getElementsByTagName(
++      "perspective-viewer"
++    )[0] as unknown) as PerspectiveViewerElement;
+ 
+     const schema = {
+-      stock: 'string',
+-      top_ask_price: 'float',
+-      top_bid_price: 'float',
+-      timestamp: 'date',
++      price_abc: "float",
++      price_def: "float",
++      ratio: "float",
++      upper_bound: "float",
++      lower_bound: "float",
++      trigger_alert: "float",
++      timestamp: "date",
+     };
+ 
+     if (window.perspective && window.perspective.worker()) {
+@@ -35,24 +40,32 @@ class Graph extends Component<IProps, {}> {
+     if (this.table) {
+       // Load the `table` in the `<perspective-viewer>` DOM reference.
+       elem.load(this.table);
+-      elem.setAttribute('view', 'y_line');
+-      elem.setAttribute('column-pivots', '["stock"]');
+-      elem.setAttribute('row-pivots', '["timestamp"]');
+-      elem.setAttribute('columns', '["top_ask_price"]');
+-      elem.setAttribute('aggregates', JSON.stringify({
+-        stock: 'distinctcount',
+-        top_ask_price: 'avg',
+-        top_bid_price: 'avg',
+-        timestamp: 'distinct count',
+-      }));
++      elem.setAttribute("view", "y_line");
++      elem.setAttribute("row-pivots", '["timestamp"]');
++      elem.setAttribute(
++        "columns",
++        '["ratio","lower_bound","upper_bound","trigger_alert"]'
++      );
++      elem.setAttribute(
++        "aggregates",
++        JSON.stringify({
++          price_abc: "avg",
++          price_def: "avg",
++          ratio: "avg",
++          upper_bound: "avg",
++          lower_bound: "avg",
++          trigger_alert: "avg",
++          timestamp: "distinct count",
++        })
++      );
+     }
+   }
+ 
+   componentDidUpdate() {
+     if (this.table) {
+-      this.table.update(
++      this.table.update(([
+         DataManipulator.generateRow(this.props.data),
+-      );
++      ] as unknown) as TableData);
+     }
+   }
+ }
+-- 
+2.41.0.windows.3
+
